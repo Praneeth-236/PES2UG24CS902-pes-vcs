@@ -232,5 +232,17 @@ int index_add(Index *index, const char *path) {
     }
     if (data) free(data);
     
-    return -1;
+    IndexEntry *e = index_find(index, path);
+    if (!e) {
+        if (index->count >= MAX_INDEX_ENTRIES) return -1;
+        e = &index->entries[index->count++];
+        snprintf(e->path, sizeof(e->path), "%s", path);
+    }
+    
+    e->hash = id;
+    e->size = st.st_size;
+    e->mtime_sec = st.st_mtime;
+    e->mode = (st.st_mode & S_IXUSR) ? 0100755 : 0100644;
+    
+    return index_save(index);
 }
