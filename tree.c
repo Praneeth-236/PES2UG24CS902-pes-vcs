@@ -162,15 +162,26 @@ static int write_tree_level(IndexEntry *entries, int count, int depth, ObjectID 
             while (j < count && strncmp(entries[j].path, path, prefix_len) == 0) {
                 j++;
             }
-            TreeEntry *te = &tree.entries[tree.count++];
-            te->mode = 0040000;
-            strncpy(te->name, p, slash - p);
-            te->name[slash - p] = '\0';
+            
+            ObjectID subdir_hash;
+            if (write_tree_level(&entries[i], j - i, depth + 1, &subdir_hash) == 0) {
+                TreeEntry *te = &tree.entries[tree.count++];
+                te->mode = 0040000;
+                te->hash = subdir_hash;
+                strncpy(te->name, p, slash - p);
+                te->name[slash - p] = '\0';
+            }
             i = j;
         }
     }
     
-    return -1;
+    void *data;
+    size_t len;
+    if (tree_serialize(&tree, &data, &len) != 0) return -1;
+    
+    int rc = object_write(OBJ_TREE, data, len, id_out);
+    free(data);
+    return rc;
 }
 
 int tree_from_index(ObjectID *id_out) {
