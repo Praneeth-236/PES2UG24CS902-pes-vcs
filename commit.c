@@ -199,5 +199,16 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     
     if (tree_from_index(&c.tree) != 0) return -1;
     
+    if (head_read(&c.parent) == 0) {
+        c.has_parent = 1;
+    } else {
+        c.has_parent = 0;
+    }
+    
+    const char *author = pes_author();
+    snprintf(c.author, sizeof(c.author), "%s", author);
+    c.timestamp = (uint64_t)time(NULL);
+    snprintf(c.message, sizeof(c.message), "%s\n", message);
+    
     return -1;
 }
