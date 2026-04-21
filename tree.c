@@ -149,7 +149,25 @@ static int write_tree_level(IndexEntry *entries, int count, int depth, ObjectID 
         
         if (!p) { i++; continue; }
         
-        i++;
+        const char *slash = strchr(p, '/');
+        if (!slash) {
+            TreeEntry *te = &tree.entries[tree.count++];
+            te->mode = entries[i].mode;
+            te->hash = entries[i].hash;
+            strcpy(te->name, p);
+            i++;
+        } else {
+            int prefix_len = slash - path + 1;
+            int j = i;
+            while (j < count && strncmp(entries[j].path, path, prefix_len) == 0) {
+                j++;
+            }
+            TreeEntry *te = &tree.entries[tree.count++];
+            te->mode = 0040000;
+            strncpy(te->name, p, slash - p);
+            te->name[slash - p] = '\0';
+            i = j;
+        }
     }
     
     return -1;
