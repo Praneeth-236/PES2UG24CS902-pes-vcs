@@ -103,7 +103,9 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
     void *full_data = malloc(full_len);
     if (!full_data) return -1;
     memcpy(full_data, header, header_len);
-    memcpy((char*)full_data + header_len, data, len);
+    if (len > 0 && data != NULL) {
+        memcpy((char*)full_data + header_len, data, len);
+    }
 
     compute_hash(full_data, full_len, id_out);
 
