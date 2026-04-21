@@ -212,5 +212,28 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
     }
     fclose(f);
 
+    ObjectID test_id;
+    compute_hash(file_data, file_size, &test_id);
+    if (memcmp(test_id.hash, id->hash, HASH_SIZE) != 0) {
+        free(file_data);
+        return -1;
+    }
+
+    void *null_pos = memchr(file_data, '\0', file_size);
+    if (!null_pos) {
+        free(file_data);
+        return -1;
+    }
+
+    char type_str[16] = {0};
+    size_t size;
+    size_t header_len = (char*)null_pos - (char*)file_data;
+
+    // A valid header shouldn't be larger than a reasonable small constant
+    if (header_len > 64) {
+        free(file_data);
+        return -1;
+    }
+
     return -1;
 }
