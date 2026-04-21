@@ -133,6 +133,12 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 #include "index.h"
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
 
+// Weak mock to satisfy test_tree linkage since it doesn't link index.o
+__attribute__((weak)) int index_load(Index *index) {
+    (void)index;
+    return -1;
+}
+
 static int write_tree_level(IndexEntry *entries, int count, int depth, ObjectID *id_out) {
     Tree tree;
     tree.count = 0;
