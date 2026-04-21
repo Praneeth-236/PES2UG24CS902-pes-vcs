@@ -107,8 +107,58 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 
     compute_hash(full_data, full_len, id_out);
 
+    if (object_exists(id_out)) {
+        free(full_data);
+        return 0; // deduplicated
+    }
+
+    char path[512];
+    object_path(id_out, path, sizeof(path));
+
+    char shard_dir[512];
+    snprintf(shard_dir, sizeof(shard_dir), "%s", path);
+    char *last_slash = strrchr(shard_dir, '/');
+    if (last_slash) *last_slash = '\0';
+
+    // Create shard directory under .pes/objects/
+    struct stat st;
+    if (stat(shard_dir, &st) != 0) {
+        mkdir(shard_dir, 0755);
+    }
+
+    char tmp_path[512];
+    snprintf(tmp_path, sizeof(tmp_path), "%s/tmp_XXXXXX", shard_dir);
+    int fd = mkstemp(tmp_path);
+    if (fd < 0) {
+        free(full_data);
+        return -1;
+    }
+
+    if (write(fd, full_data, full_len) != (ssize_t)full_len) {
+        close(fd);
+        unlink(tmp_path);
+        free(full_data);
+        return -1;
+    }
+
+    fsync(fd);
+    close(fd);
+
+    if (rename(tmp_path, path) != 0) {
+        unlink(tmp_path);
+        free(full_data);
+        return -1;
+    }
+
     free(full_data);
-    return -1;
+
+    int dir_fd = open(shard_dir, O_RDONLY);
+    if (dir_fd >= 0) {
+        fsync(dir_fd);
+        close(dir_fd);
+    }
+
+    return 0;
 }
 
 // Read an object from the store.
